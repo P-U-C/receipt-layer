@@ -5,6 +5,7 @@
 [![Deploy](https://img.shields.io/badge/deployed-live-brightgreen)](https://rcpt.p-u-c.workers.dev)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-47%20passing-brightgreen)]()
+[![CI](https://github.com/P-U-C/rcpt/actions/workflows/ci.yml/badge.svg)](https://github.com/P-U-C/rcpt/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/badge/version-0.1.0-blue)]()
 
 Agents can pay each other. They cannot prove to each other that a service was delivered as promised.
