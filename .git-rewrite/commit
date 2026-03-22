@@ -1,0 +1,15 @@
+tree 3e0af75d026bc38047a8e5ca3da7e71a444b0c45
+author b1e55ed <b1e55ed@permanentupperclass.com> 1774201723 +0000
+committer b1e55ed <b1e55ed@permanentupperclass.com> 1774201723 +0000
+
+feat: Agent Receipt Layer v0.1.0 — Walrus storage day 1, 36 tests passing
+
+- D1 query index + Walrus immutable storage
+- commit/deliver/ack lifecycle with state machine validation
+- Full test suite (receipt, db, verify, walrus)
+- OpenAPI spec, protocol docs, adapter patterns
+- Permissionless verification via Walrus aggregator
+
+Blockers:
+- Cloudflare API token lacks D1/KV permissions (cannot deploy)
+- All code complete, tests passing, ready for deploy when token fixed

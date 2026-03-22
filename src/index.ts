@@ -1,0 +1,20 @@
+import { Hono } from 'hono';
+import type { Env } from './types';
+import { cors } from './middleware/cors';
+import { requestId } from './middleware/requestId';
+import { ratelimit } from './middleware/ratelimit';
+import { receiptsRouter } from './routes/receipts';
+import { verifyRouter } from './routes/verify';
+import { agentsRouter } from './routes/agents';
+
+const app = new Hono<{ Bindings: Env }>();
+app.use('*', cors);
+app.use('*', requestId);
+app.use('/v1/*', ratelimit);
+app.get('/v1/health', (c) => c.json({ status: 'ok', version: '0.1.0', service: 'receipt-layer' }));
+app.route('/v1/receipt', receiptsRouter);
+app.route('/v1/verify', verifyRouter);
+app.route('/v1/agent', agentsRouter);
+app.notFound((c) => c.json({ error: 'Not found' }, 404));
+app.onError((_err, c) => c.json({ error: 'Internal error' }, 503));
+export default app;

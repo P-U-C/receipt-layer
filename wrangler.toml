@@ -1,0 +1,12 @@
+name = "receipt-layer"
+main = "src/index.ts"
+compatibility_date = "2024-03-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "receipt-layer"
+database_id = "e1bdb996-5305-4a51-947f-c15d23310253"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "d9bf117e14544bb3a3feb4e9fc563d8e"

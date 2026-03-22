@@ -1,0 +1,401 @@
+openapi: 3.0.0
+info:
+  title: Agent Receipt Layer API
+  version: 0.1.0
+  description: Verifiable service receipts for the agent economy
+  contact:
+    name: P-U-C
+    url: https://github.com/P-U-C/receipt-layer
+servers:
+  - url: https://receipt-layer.p-u-c.workers.dev
+    description: Production
+
+paths:
+  /v1/health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  version:
+                    type: string
+                    example: 0.1.0
+                  service:
+                    type: string
+                    example: receipt-layer
+
+  /v1/receipt/commit:
+    post:
+      summary: Create receipt commitment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommitRequest'
+      responses:
+        '201':
+          description: Receipt created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Receipt'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /v1/receipt/{id}:
+    get:
+      summary: Get receipt by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: rcpt_abc123
+      responses:
+        '200':
+          description: Receipt found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Receipt'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/receipt/{id}/deliver:
+    post:
+      summary: Record service delivery
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeliverRequest'
+      responses:
+        '200':
+          description: Delivery recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Receipt'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/InvalidTransition'
+
+  /v1/receipt/{id}/ack:
+    post:
+      summary: Consumer acknowledgment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AckRequest'
+      responses:
+        '200':
+          description: Acknowledgment recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Receipt'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/InvalidTransition'
+
+  /v1/verify/{id}:
+    get:
+      summary: Verify receipt
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Verification result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyResult'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/agent/{address}/receipts:
+    get:
+      summary: Get receipts by address
+      parameters:
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "0xB1e55EdD3176Ce9C9aF28F15b79e0c0eb8Fe51AA"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [committed, delivered, acknowledged, disputed]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Receipts found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  address:
+                    type: string
+                  count:
+                    type: integer
+                  receipts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Receipt'
+
+components:
+  schemas:
+    CommitRequest:
+      type: object
+      required:
+        - capability
+        - provider
+        - consumer
+      properties:
+        capability:
+          type: string
+          example: sentiment-analysis
+        provider:
+          $ref: '#/components/schemas/AgentIdentity'
+        consumer:
+          $ref: '#/components/schemas/AgentIdentity'
+        spec_hash:
+          type: string
+          nullable: true
+        payment:
+          $ref: '#/components/schemas/PaymentDetails'
+        provider_signature:
+          type: string
+          nullable: true
+
+    DeliverRequest:
+      type: object
+      required:
+        - output_hash
+      properties:
+        output_hash:
+          type: string
+          example: "0xabc123..."
+        execution_metadata:
+          type: object
+          properties:
+            model:
+              type: string
+            tokens:
+              type: integer
+            duration_ms:
+              type: integer
+        provider_signature:
+          type: string
+          nullable: true
+
+    AckRequest:
+      type: object
+      required:
+        - consumer_signature
+      properties:
+        consumer_signature:
+          type: string
+
+    AgentIdentity:
+      type: object
+      required:
+        - address
+        - protocol
+      properties:
+        agent_id:
+          type: string
+          nullable: true
+        address:
+          type: string
+        protocol:
+          type: string
+          enum: [a2a, mcp, acp, http, mpp, custom]
+        endpoint:
+          type: string
+          nullable: true
+
+    PaymentDetails:
+      type: object
+      required:
+        - amount
+        - asset
+        - rail
+        - chain
+      properties:
+        amount:
+          type: string
+        asset:
+          type: string
+        rail:
+          type: string
+          enum: [mpp, x402, ap2, direct, other]
+        chain:
+          type: integer
+        tx_hash:
+          type: string
+          nullable: true
+
+    Receipt:
+      type: object
+      properties:
+        receipt_id:
+          type: string
+        version:
+          type: string
+        capability:
+          type: string
+        provider:
+          $ref: '#/components/schemas/AgentIdentity'
+        consumer:
+          $ref: '#/components/schemas/AgentIdentity'
+        spec_hash:
+          type: string
+          nullable: true
+        payment:
+          $ref: '#/components/schemas/PaymentDetails'
+          nullable: true
+        provider_signature:
+          type: string
+          nullable: true
+        consumer_signature:
+          type: string
+          nullable: true
+        output_hash:
+          type: string
+          nullable: true
+        execution_metadata:
+          type: object
+          nullable: true
+        status:
+          type: string
+          enum: [committed, delivered, acknowledged, disputed]
+        chain_anchor:
+          type: object
+          nullable: true
+          properties:
+            chain:
+              type: string
+            tx_hash:
+              type: string
+        walrus_blob_id:
+          type: string
+          nullable: true
+        walrus_url:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        delivered_at:
+          type: string
+          format: date-time
+          nullable: true
+        acknowledged_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    VerifyResult:
+      type: object
+      properties:
+        receipt_id:
+          type: string
+        status:
+          type: string
+        provider_verified:
+          type: boolean
+        consumer_verified:
+          type: boolean
+        walrus_verified:
+          type: boolean
+        walrus_url:
+          type: string
+          nullable: true
+        chain_anchor:
+          type: object
+          nullable: true
+        receipt:
+          $ref: '#/components/schemas/Receipt'
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+
+    NotFound:
+      description: Receipt not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Receipt not found
+
+    InvalidTransition:
+      description: Invalid state transition
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+
+    ServiceUnavailable:
+      description: Service temporarily unavailable
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

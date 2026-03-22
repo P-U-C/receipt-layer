@@ -1,0 +1,25 @@
+{
+  "name": "receipt-layer",
+  "version": "0.1.0",
+  "description": "Verifiable service receipts for the agent economy",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": ["agent", "receipt", "verification", "cloudflare", "workers"],
+  "author": "P-U-C",
+  "license": "MIT",
+  "dependencies": {
+    "hono": "^4.7.7"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250108.0",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8",
+    "wrangler": "^3.106.0"
+  }
+}
