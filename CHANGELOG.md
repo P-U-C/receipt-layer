@@ -52,3 +52,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Single-region deployment (WNAM)
 
 [0.1.0]: https://github.com/P-U-C/receipt-layer/releases/tag/v0.1.0
+
+## [0.1.1] — 2026-03-22
+
+### Added
+- Private receipts: `visibility: "private"` with ECDH + AES-256-GCM encryption
+- MPP x402 payment gate: 100 free commits/day, 0.001 USDC paid tier
+- Sui Seal mainnet upgrade path documented in `src/lib/encryption.ts`
+- D1 migration 0002: visibility, encryption_method, pubkey columns
+- `rcpt/` rebrand: new URL `rcpt.p-u-c.workers.dev`, GitHub `P-U-C/rcpt`
+- ERC-8004 track added (verify route checks agent identity via Base mainnet RPC)
+
+### Fixed
+- D1 read-after-write lag: build response in memory, not from DB re-read
+- `AbortSignal.timeout()` for CF Workers (setTimeout ignored)
+- ECDH `public` key field: runtime needs `public`, not `$public` (TS type lies)
+- Walrus re-stored on every state transition (commit → deliver → ack)
+
+### Tests
+- 47 tests passing, zero TypeScript errors
