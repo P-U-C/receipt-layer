@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { Env, CommitBody, AgentIdentity, AgentProtocol, PaymentRail } from '../types';
 import { createReceipt, getReceipt, updateDelivery, updateAck } from '../lib/db';
 import { canTransition, validateAddress } from '../lib/receipt';
+import { checkFreeTier, verifyPayment, buildPaymentRequest, FREE_COMMITS_PER_DAY } from '../lib/mpp';
 
 export const receiptsRouter = new Hono<{ Bindings: Env }>();
 
@@ -25,6 +26,30 @@ receiptsRouter.post('/commit', async (c) => {
     return c.json({ error: 'provider.address must be a valid Ethereum address' }, 400);
   if (!raw.consumer?.address || !validateAddress(String(raw.consumer.address)))
     return c.json({ error: 'consumer.address must be a valid Ethereum address' }, 400);
+
+  // Payment gate
+  const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('X-Forwarded-For') ?? 'unknown';
+  const xPayment = c.req.header('x-payment');
+
+  if (xPayment) {
+    const { valid, reason } = await verifyPayment(c.env, xPayment);
+    if (!valid) {
+      c.header('x-payment-error', reason ?? 'invalid payment');
+      return c.json({ error: `Payment verification failed: ${reason}` }, 402);
+    }
+    c.header('x-payment-accepted', 'true');
+  } else {
+    const { allowed, remaining } = await checkFreeTier(c.env, ip);
+    c.header('x-free-commits-remaining', String(remaining));
+    c.header('x-free-tier-limit', String(FREE_COMMITS_PER_DAY));
+    if (!allowed) {
+      c.header('Access-Control-Expose-Headers', [
+        'x-payment-accepted', 'x-free-commits-remaining', 'x-free-tier-limit', 'x-payment-error',
+        'X-Request-Id', 'X-Receipt-Version', 'X-RateLimit-Limit', 'X-RateLimit-Remaining',
+      ].join(', '));
+      return c.json(buildPaymentRequest(String(raw.capability)), 402);
+    }
+  }
 
   const provider: AgentIdentity = {
     address: String(raw.provider.address),
